@@ -606,8 +606,6 @@ int main(int argc, char** argv)
             dlog::flush();
         }
 
-
-
         // here merge tree computation stops
         // sync to measure runtime
         world.barrier();
@@ -631,7 +629,7 @@ int main(int argc, char** argv)
 	        AmrVertexId vertex = vertex_root_pair.first;  // Vertex ID
                 AmrVertexId root = vertex_root_pair.second;  // Root of the merge tree
 
-		// Get global position of the root (use appropriate method for your data structure)
+		// Get global position of the root 
                 auto root_position = coarsen_point(b->local_.global_position(root), b->refinement(), 1);
 		//auto root_position = b->local_.global_position(root);
 		// Output vertex, root, and root coordinates
