@@ -18,6 +18,12 @@
 
 #include "reeber/amr-vertex.h"
 
+inline std::ostream& operator<<(std::ostream& os, diy::BlockID bid)
+{
+    os << "BlockID(proc = " << bid.proc << ", gid = " << bid.gid << ")";
+    return os;
+}
+
 template<class Cont>
 std::string container_to_string(const Cont& v)
 {
@@ -29,12 +35,6 @@ std::string container_to_string(const Cont& v)
     }
     ss << "]";
     return ss.str();
-}
-
-inline std::ostream& operator<<(std::ostream& os, diy::BlockID bid)
-{
-    os << "BlockID(proc = " << bid.proc << ", gid = " << bid.gid << ")";
-    return os;
 }
 
 inline std::set<diy::BlockID> link_unique(diy::AMRLink* amr_link, int gid)
