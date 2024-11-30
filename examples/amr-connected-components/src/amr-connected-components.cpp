@@ -138,6 +138,9 @@ void read_from_file(std::string infn,
         int nblocks,
         BoolVector wrap)
 {
+
+    std::cout << "Running: " << "read_from_file" << std::endl;
+
     if (not file_exists(infn))
     {
         throw std::runtime_error("Cannot read file " + infn);
@@ -162,6 +165,7 @@ void read_from_file(std::string infn,
     }
 }
 
+// wang: computes merge tree???
 void create_fab_cc_blocks(const diy::mpi::communicator& world, int in_memory, int threads, Real rho, bool absolute,
         bool negate, bool wrap, const diy::FileStorage& storage, diy::Master& master_reader, diy::Master& master,
         const Real cell_volume, const diy::DiscreteBounds& domain)
@@ -169,6 +173,7 @@ void create_fab_cc_blocks(const diy::mpi::communicator& world, int in_memory, in
     // copy FabBlocks to FabComponentBlocks
     // in FabTmtConstructor mask will be set and local trees will be computed
     // FabBlock can be safely discarded afterwards
+    std::cout << "Running: " << "create_fab_cc_blocks" << std::endl;
 
     master_reader.foreach(
             [&master, domain, rho, negate, wrap, absolute, cell_volume](FabBlockR* b, const diy::Master::ProxyWithLink& cp) {
@@ -193,6 +198,8 @@ void create_fab_cc_blocks(const diy::mpi::communicator& world, int in_memory, in
 void write_tree_blocks(const diy::mpi::communicator& world, bool split, const std::string& output_filename,
         diy::Master& master)
 {
+    
+    std::cout << "Running: " << "write_tree_blocks" << std::endl;
     if (output_filename != "none")
     {
         if (!split)
@@ -215,7 +222,8 @@ int main(int argc, char** argv)
     int in_memory = -1;
     int threads = 1;
     std::string profile_path;
-    std::string log_level = "info";
+    //std::string log_level = "info";
+    std::string log_level = "error";
 
     dlog::add_stream(std::cerr, dlog::severity(log_level))
             << dlog::stamp() << dlog::aux_reporter(world.rank()) << dlog::color_pre() << dlog::level()
@@ -311,9 +319,11 @@ int main(int argc, char** argv)
     LOG_SEV_IF(world.rank() == 0, info) << "Reading fields: " << container_to_string(all_var_names) << ", fields to sum = " << n_mt_vars;
     dlog::flush();
 
+
     bool write_diag = (ops >> PosOption(output_diagrams_filename)) and (output_diagrams_filename != "none");
     bool write_integral = (ops >> PosOption(output_integral_filename)) and (output_integral_filename != "none");
 
+    //std::cout << "output_diagrams_filename: " << output_diagrams_filename << std::endl;
     diy::FileStorage storage(prefix);
 
     diy::Master master_reader(world, 1, in_memory, &FabBlockR::create, &FabBlockR::destroy);
@@ -327,6 +337,7 @@ int main(int argc, char** argv)
                                         << nblocks
                                         << ", rho = " << rho;
     dlog::flush();
+
 
 #ifdef REEBER_DO_DETAILED_TIMING
     // detailed timings
@@ -382,6 +393,7 @@ int main(int argc, char** argv)
     auto time_to_read_data = timer.elapsed();
     dlog::flush();
 
+    //LOG_SEV_IF(world.rank() == 0, info) << "Output_filename: " << output_filename;
     LOG_SEV_IF(world.rank() == 0, info) << "Data read, local size = " << master_reader.size();
     LOG_SEV_IF(world.rank() == 0, info) << "Time to read data:       " << dlog::clock_to_string(timer.elapsed());
     dlog::flush();
@@ -435,6 +447,7 @@ int main(int argc, char** argv)
             Real total_unmasked = proxy.get<Real>();
 
             mean = total_sum / total_unmasked;
+	    std::cout << "total sum = " << total_sum << std::endl;
 
             absolute_rho = rho * mean;                                            // now rho contains absolute threshold
 #ifdef REEBER_DO_DETAILED_TIMING
@@ -593,6 +606,8 @@ int main(int argc, char** argv)
             dlog::flush();
         }
 
+
+
         // here merge tree computation stops
         // sync to measure runtime
         world.barrier();
@@ -608,6 +623,25 @@ int main(int argc, char** argv)
 
         // save the result
         write_tree_blocks(world, split, output_filename, master);
+
+	// wang: Output vertices associated with their merge tree and root coordinates
+	std::ofstream vertex_output("vertices_to_trees.txt");
+        master.foreach([&vertex_output](Block* b, const diy::Master::ProxyWithLink& cp) {
+            for (const auto& vertex_root_pair : b->vertex_to_deepest_) {
+	        AmrVertexId vertex = vertex_root_pair.first;  // Vertex ID
+                AmrVertexId root = vertex_root_pair.second;  // Root of the merge tree
+
+		// Get global position of the root (use appropriate method for your data structure)
+                auto root_position = coarsen_point(b->local_.global_position(root), b->refinement(), 1);
+		//auto root_position = b->local_.global_position(root);
+		// Output vertex, root, and root coordinates
+                vertex_output << "Vertex: " << vertex
+                              << " belongs to tree rooted at: " << root
+                              << " (Root Coordinates: " << root_position[0] << ", "
+                              << root_position[1] << ", " << root_position[2] << ")\n";
+            }
+        });
+        vertex_output.close();
 
         LOG_SEV_IF(world.rank() == 0, info) << "Time to write tree:  " << dlog::clock_to_string(timer.elapsed());
         auto time_for_output = timer.elapsed();
@@ -650,17 +684,20 @@ int main(int argc, char** argv)
             world.barrier();
 
 
+	    // wang: this is the file holding the halo data
             diy::io::SharedOutFile ofs(output_integral_filename, world);
+	    std::cout << "output_integral_filename: " << output_integral_filename << std::endl;
 
-//                            fmt::print(ofs, "{} {} {} {} {} {} {} {} {} {} {}\n",
-//                                    n_vertices_sf,
-//                                    n_vertices,
-//                                    root,
-//                                    domain_box.index(b->local_.global_position(root)), // TODO: fix for non-flat AMR
-//                                    b->local_.global_position(root),
-//                                    vx, vy, vz,
-//                                    m_gas, m_particles, m_total);
+           //fmt::print(ofs, "{} {} {} {} {} {} {} {} {} {} {}\n",
+           //        n_vertices_sf,
+           //        n_vertices,
+           //        root,
+           //        domain_box.index(b->local_.global_position(root)), // TODO: fix for non-flat AMR
+           //        b->local_.global_position(root),
+           //        vx, vy, vz,
+           //        m_gas, m_particles, m_total);
 
+	    // wang: for each thread/process, write own halo data
             master.foreach(
                     [&world, &ofs, domain, min_cells, integral_var_names](Block* b, const diy::Master::ProxyWithLink& cp)
                     {
@@ -669,6 +706,8 @@ int main(int argc, char** argv)
                         {
                             domain_shape[i] = domain.max[i] - domain.min[i] + 1;
                         }
+
+			std::cout << "domain shape: " << domain_shape[0] << " " << domain_shape[1] << " " << domain_shape[2] << std::endl; // 512 512 512
 
                         diy::GridRef<void*, 3> domain_box(nullptr, domain_shape, /* c_order = */ false);
 
@@ -710,16 +749,11 @@ int main(int argc, char** argv)
                             if (n_cells < min_cells)
                                 continue;
 
-//                            fmt::print(ofs, "{} {} {} {} {} {} {} {} {} {} {}\n",
-//                                    n_vertices_sf,
-//                                    n_vertices,
-//                                    root,
-//                                    domain_box.index(b->local_.global_position(root)), // TODO: fix for non-flat AMR
-//                                    b->local_.global_position(root),
-//                                    vx, vy, vz,
-//                                    m_gas, m_particles, m_total);
-
+			    // wang: root_position are the coordinates of the halo center: x y z
+			    // wang: domain_box.index produces the index of the halo
+			    // wang: b->pretty_integral contains the values of **n_vertices** and **total_mass**
                             auto root_position = coarsen_point(b->local_.global_position(root), b->refinement(), 1);
+			    std::cout << "root_position: " <<  root_position << ", domain_box.index: " << domain_box.index(root_position) << ", b->pretty_integral: " << b->pretty_integral(root, integral_vars) << std::endl;
 
                             fmt::print(ofs, "{} {} {}\n",
                                     domain_box.index(root_position),
