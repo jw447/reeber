@@ -624,20 +624,36 @@ int main(int argc, char** argv)
 
 	// wang: Output vertices associated with their merge tree and root coordinates
 	std::ofstream vertex_output("vertices_to_trees.txt");
-        master.foreach([&vertex_output](Block* b, const diy::Master::ProxyWithLink& cp) {
+        //master.foreach([&vertex_output](Block* b, const diy::Master::ProxyWithLink& cp) {
+	master.foreach([&vertex_output, absolute_rho, min_cells](Block* b, const diy::Master::ProxyWithLink& cp) {
+	    //int tcount = 0;
             for (const auto& vertex_root_pair : b->vertex_to_deepest_) {
 	        AmrVertexId vertex = vertex_root_pair.first;  // Vertex ID
                 AmrVertexId root = vertex_root_pair.second;  // Root of the merge tree
 
+                if (root.gid != b->gid)
+                    continue;
+		    
+		// Get the cell count associated with this root
+                const auto& values = b->local_integral_.at(root);
+
+                // Apply filtering based on rho and min_cells
+                Real n_cells = values.at("n_cells");
+                if (n_cells < min_cells) {
+                    continue; // Skip if it doesn't meet the criteria
+                }
+
 		// Get global position of the root 
                 auto root_position = coarsen_point(b->local_.global_position(root), b->refinement(), 1);
+		//tcount += 1;
 		//auto root_position = b->local_.global_position(root);
 		// Output vertex, root, and root coordinates
-                vertex_output << "Vertex: " << vertex
-                              << " belongs to tree rooted at: " << root
-                              << " (Root Coordinates: " << root_position[0] << ", "
-                              << root_position[1] << ", " << root_position[2] << ")\n";
+                //vertex_output << "Vertex: " << vertex
+                //              << " belongs to tree rooted at: " << root
+                //              << " (Root Coordinates: " << root_position[0] << ", "
+                vertex_output << root_position[0] << "," << root_position[1] << ", " << root_position[2] << ")\n";
             }
+	    //std::cout << "tree_count="<< tcount << std::endl;
         });
         vertex_output.close();
 
@@ -705,7 +721,7 @@ int main(int argc, char** argv)
                             domain_shape[i] = domain.max[i] - domain.min[i] + 1;
                         }
 
-			std::cout << "domain shape: " << domain_shape[0] << " " << domain_shape[1] << " " << domain_shape[2] << std::endl; // 512 512 512
+			//std::cout << "domain shape: " << domain_shape[0] << " " << domain_shape[1] << " " << domain_shape[2] << std::endl; // 512 512 512
 
                         diy::GridRef<void*, 3> domain_box(nullptr, domain_shape, /* c_order = */ false);
 
@@ -734,6 +750,7 @@ int main(int argc, char** argv)
                             fmt::print(ofs, integral_header);
                         }
 
+			//int hcount = 0;
                         for(const auto& root_values_pair : b->local_integral_)
                         {
                             AmrVertexId root = root_values_pair.first;
@@ -751,13 +768,15 @@ int main(int argc, char** argv)
 			    // wang: domain_box.index produces the index of the halo
 			    // wang: b->pretty_integral contains the values of **n_vertices** and **total_mass**
                             auto root_position = coarsen_point(b->local_.global_position(root), b->refinement(), 1);
-			    std::cout << "root_position: " <<  root_position << ", domain_box.index: " << domain_box.index(root_position) << ", b->pretty_integral: " << b->pretty_integral(root, integral_vars) << std::endl;
+			    //std::cout << "root_position: " <<  root_position << ", domain_box.index: " << domain_box.index(root_position) << ", b->pretty_integral: " << b->pretty_integral(root, integral_vars) << std::endl;
 
+			    //hcount += 1;
                             fmt::print(ofs, "{} {} {}\n",
                                     domain_box.index(root_position),
                                     root_position,
                                     b->pretty_integral(root, integral_vars));
                         }
+			//std::cout << "halo_count=" << hcount << std::endl;
                     });
 
             LOG_SEV_IF(world.rank() == 0, info) << "Time to compute and write integral:  "
