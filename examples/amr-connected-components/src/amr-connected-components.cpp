@@ -36,6 +36,7 @@
 #include "amr-plot-reader.h"
 #include "amr-connected-components-complex.h"
 
+#include <algorithm>
 
 // block-independent types
 using AMRLink = diy::AMRLink;
@@ -139,7 +140,7 @@ void read_from_file(std::string infn,
         BoolVector wrap)
 {
 
-    std::cout << "Running: " << "read_from_file" << std::endl;
+    //std::cout << "Running: " << "read_from_file" << std::endl;
 
     if (not file_exists(infn))
     {
@@ -173,7 +174,7 @@ void create_fab_cc_blocks(const diy::mpi::communicator& world, int in_memory, in
     // copy FabBlocks to FabComponentBlocks
     // in FabTmtConstructor mask will be set and local trees will be computed
     // FabBlock can be safely discarded afterwards
-    std::cout << "Running: " << "create_fab_cc_blocks" << std::endl;
+    //std::cout << "Running: " << "create_fab_cc_blocks" << std::endl;
 
     master_reader.foreach(
             [&master, domain, rho, negate, wrap, absolute, cell_volume](FabBlockR* b, const diy::Master::ProxyWithLink& cp) {
@@ -199,7 +200,7 @@ void write_tree_blocks(const diy::mpi::communicator& world, bool split, const st
         diy::Master& master)
 {
     
-    std::cout << "Running: " << "write_tree_blocks" << std::endl;
+    //std::cout << "Running: " << "write_tree_blocks" << std::endl;
     if (output_filename != "none")
     {
         if (!split)
@@ -270,6 +271,7 @@ int main(int argc, char** argv)
     bool print_stats = ops >> opts::Present("stats", "print statistics");
     std::string input_filename, output_filename, output_diagrams_filename, output_integral_filename;
 
+
     if (ops >> Present('h', "help", "show help message") or
             not(ops >> PosOption(input_filename)) or
             not(ops >> PosOption(output_filename)))
@@ -315,6 +317,8 @@ int main(int argc, char** argv)
         all_var_names.push_back("particle_mass_density");
         n_mt_vars = all_var_names.size();
     }
+    
+    //std::cout << "integral_var_names: " << all_var_names[0] << std::endl;
 
     LOG_SEV_IF(world.rank() == 0, info) << "Reading fields: " << container_to_string(all_var_names) << ", fields to sum = " << n_mt_vars;
     dlog::flush();
@@ -447,7 +451,7 @@ int main(int argc, char** argv)
             Real total_unmasked = proxy.get<Real>();
 
             mean = total_sum / total_unmasked;
-	    std::cout << "total sum = " << total_sum << std::endl;
+	    //std::cout << "total sum = " << total_sum << std::endl;
 
             absolute_rho = rho * mean;                                            // now rho contains absolute threshold
 #ifdef REEBER_DO_DETAILED_TIMING
@@ -622,41 +626,6 @@ int main(int argc, char** argv)
         // save the result
         write_tree_blocks(world, split, output_filename, master);
 
-	// wang: Output vertices associated with their merge tree and root coordinates
-	std::ofstream vertex_output("vertices_to_trees.txt");
-        //master.foreach([&vertex_output](Block* b, const diy::Master::ProxyWithLink& cp) {
-	master.foreach([&vertex_output, absolute_rho, min_cells](Block* b, const diy::Master::ProxyWithLink& cp) {
-	    //int tcount = 0;
-            for (const auto& vertex_root_pair : b->vertex_to_deepest_) {
-	        AmrVertexId vertex = vertex_root_pair.first;  // Vertex ID
-                AmrVertexId root = vertex_root_pair.second;  // Root of the merge tree
-
-                if (root.gid != b->gid)
-                    continue;
-		    
-		// Get the cell count associated with this root
-                const auto& values = b->local_integral_.at(root);
-
-                // Apply filtering based on rho and min_cells
-                Real n_cells = values.at("n_cells");
-                if (n_cells < min_cells) {
-                    continue; // Skip if it doesn't meet the criteria
-                }
-
-		// Get global position of the root 
-                auto root_position = coarsen_point(b->local_.global_position(root), b->refinement(), 1);
-		//tcount += 1;
-		//auto root_position = b->local_.global_position(root);
-		// Output vertex, root, and root coordinates
-                //vertex_output << "Vertex: " << vertex
-                //              << " belongs to tree rooted at: " << root
-                //              << " (Root Coordinates: " << root_position[0] << ", "
-                vertex_output << root_position[0] << "," << root_position[1] << ", " << root_position[2] << ")\n";
-            }
-	    //std::cout << "tree_count="<< tcount << std::endl;
-        });
-        vertex_output.close();
-
         LOG_SEV_IF(world.rank() == 0, info) << "Time to write tree:  " << dlog::clock_to_string(timer.elapsed());
         auto time_for_output = timer.elapsed();
         dlog::flush();
@@ -697,10 +666,54 @@ int main(int argc, char** argv)
             dlog::flush();
             world.barrier();
 
+	    // wang: Output vertices associated with their merge tree and root coordinates
+	    std::string dataname=input_filename;
+	    std::replace(dataname.begin(), dataname.end(), '/', '_');
+	    std::string v2h = all_var_names[0];
+	    std::replace(v2h.begin(), v2h.end(), '/', '_');
+	    std::string v2h_filename = dataname+"_"+v2h+"_v2h.txt";
+	    std::ofstream vertex_output(v2h_filename);
+            //master.foreach([&vertex_output](Block* b, const diy::Master::ProxyWithLink& cp) {
+	    master.foreach([&vertex_output, absolute_rho, min_cells](Block* b, const diy::Master::ProxyWithLink& cp) {
+	        //int tcount = 0;
+                for (const auto& vertex_root_pair : b->vertex_to_deepest_) {
+	            AmrVertexId vertex = vertex_root_pair.first;  // Vertex ID
+                    AmrVertexId root = vertex_root_pair.second;  // Root of the merge tree
+
+                    if (root.gid != b->gid)
+                        continue;
+	    	    
+	    	// Get the cell count associated with this root
+                    const auto& values = b->local_integral_.at(root);
+
+                    // Apply filtering based on rho and min_cells
+                    Real n_cells = values.at("n_cells");
+                    if (n_cells < min_cells) {
+                        continue; // Skip if it doesn't meet the criteria
+                    }
+
+	    	// Get global position of the root 
+                    auto root_position = coarsen_point(b->local_.global_position(root), b->refinement(), 1);
+	    	auto vertex_position = coarsen_point(b->local_.global_position(vertex), b->refinement(), 1);
+	    	//tcount += 1;
+	    	//auto root_position = b->local_.global_position(root);
+	    	// Output vertex, root, and root coordinates
+                //vertex_output << "Vertex: " << vertex
+                //              << " belongs to tree rooted at: " << root
+                //              << " (Root Coordinates: " << root_position[0] << ", "
+	    	//vertex_output << "Vertex " << vertex_position[0] << ", " << vertex_position[1] << ", " << vertex_position[2] 
+                //                  << " at Root " << root_position[0] << ", " << root_position[1] << ", " << root_position[2] << "\n";
+		vertex_output << vertex_position[0] << " " << vertex_position[1] << " " << vertex_position[2] << " "
+			      << root_position[0] << " " << root_position[1] << " " << root_position[2] << "\n";
+                }
+	        //std::cout << "tree_count="<< tcount << std::endl;
+            });
+            vertex_output.close();
 
 	    // wang: this is the file holding the halo data
             diy::io::SharedOutFile ofs(output_integral_filename, world);
-	    std::cout << "output_integral_filename: " << output_integral_filename << std::endl;
+	    //std::cout << "output_integral_filename: " << output_integral_filename << std::endl;
+            std::cout << "inputfilename: " << input_filename << " " << "field names: " << all_var_names[0] << ", output v2h file: " << v2h_filename << std::endl; 
 
            //fmt::print(ofs, "{} {} {} {} {} {} {} {} {} {} {}\n",
            //        n_vertices_sf,
