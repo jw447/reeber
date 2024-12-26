@@ -130,14 +130,16 @@ void read_from_file(std::string infn,
         diy::MemoryBuffer& header,
         diy::DiscreteBounds& domain,
         bool split,
-        int nblocks)
+        int nblocks,
+	//bool wrap)
+	diy::RegularDecomposer<diy::DiscreteBounds>::BoolVector wrap)
 {
     if (not file_exists(infn))
         throw std::runtime_error("Cannot read file " + infn);
 
     if (ends_with(infn, ".npy"))
     {
-        read_from_npy_file<DIM>(infn, world, nblocks, master_reader, assigner, header, domain);
+        read_from_npy_file<DIM>(infn, world, nblocks, master_reader, assigner, header, domain, wrap); // wang: adding wrap here.
     } else
     {
         if (split)
@@ -375,7 +377,9 @@ int main(int argc, char** argv)
         read_amr_plotfile(input_filename, all_var_names, n_mt_vars, world, nblocks, master_reader, header, cell_volume, domain);
     } else
     {
-        read_from_file(input_filename, world, master_reader, assigner, header, domain, split, nblocks);
+	diy::RegularDecomposer<diy::DiscreteBounds>::BoolVector _wrap;
+	_wrap.assign(1, wrap);
+        read_from_file(input_filename, world, master_reader, assigner, header, domain, split, nblocks, _wrap); //wang: add the wrap arg here. Not sure what it does
     }
 
     world.barrier();

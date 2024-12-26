@@ -19,7 +19,7 @@
 
 #include "fab-block.h"
 
-template<unsigned D>
+template<unsigned int D>
 void read_from_npy_file(std::string infn,
                         diy::mpi::communicator& world,
                         int nblocks,
