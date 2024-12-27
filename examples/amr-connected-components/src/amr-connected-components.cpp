@@ -745,42 +745,42 @@ int main(int argc, char** argv)
 			//std::cout << "halo_count=" << hcount << std::endl;
                     });
 	    
-	    // wang: Output vertices associated with their merge tree and root coordinates
-	    std::string dataname=input_filename;
-	    std::string fileName = getFileName(dataname);
-	    
-	    std::string v2h = all_var_names[0];
-	    v2h = getFileName(v2h);
+	    //// wang: Output vertices associated with their merge tree and root coordinates
+	    //std::string dataname=input_filename;
+	    //std::string fileName = getFileName(dataname);
+	    //
+	    //std::string v2h = all_var_names[0];
+	    //v2h = getFileName(v2h);
 
-	    std::string v2h_filename = fileName+"_"+v2h+"_v2h.txt";
-	    std::ofstream vertex_output(v2h_filename);
-	    
-	    master.foreach([&vertex_output, absolute_rho, min_cells](Block* b, const diy::Master::ProxyWithLink& cp) {
-                for (const auto& vertex_root_pair : b->vertex_to_deepest_) {
-	            AmrVertexId vertex = vertex_root_pair.first;  // Vertex ID
-                    AmrVertexId root = vertex_root_pair.second;  // Root of the merge tree
+	    //std::string v2h_filename = fileName+"_"+v2h+"_v2h.txt";
+	    //std::ofstream vertex_output(v2h_filename);
+	    //
+	    //master.foreach([&vertex_output, absolute_rho, min_cells](Block* b, const diy::Master::ProxyWithLink& cp) {
+            //    for (const auto& vertex_root_pair : b->vertex_to_deepest_) {
+	    //        AmrVertexId vertex = vertex_root_pair.first;  // Vertex ID
+            //        AmrVertexId root = vertex_root_pair.second;  // Root of the merge tree
 
-                    if (root.gid != b->gid)
-                        continue;
-	    	    
-	    	    // Get the cell count associated with this root
-                    const auto& values = b->local_integral_.at(root);
+            //        if (root.gid != b->gid)
+            //            continue;
+	    //	    
+	    //	    // Get the cell count associated with this root
+            //        const auto& values = b->local_integral_.at(root);
 
-                    // Apply filtering based on rho and min_cells
-                    Real n_cells = values.at("n_cells");
-                    if (n_cells < min_cells) {
-                        continue; // Skip if it doesn't meet the criteria
-                    }
+            //        // Apply filtering based on rho and min_cells
+            //        Real n_cells = values.at("n_cells");
+            //        if (n_cells < min_cells) {
+            //            continue; // Skip if it doesn't meet the criteria
+            //        }
 
-	    	    // Get global position of the root 
-                    auto root_position = coarsen_point(b->local_.global_position(root), b->refinement(), 1);
-	    	    auto vertex_position = coarsen_point(b->local_.global_position(vertex), b->refinement(), 1);
-		    vertex_output << vertex_position[0] << " " << vertex_position[1] << " " << vertex_position[2] << " "
-			      << root_position[0] << " " << root_position[1] << " " << root_position[2] << "\n";
-                }
-            });
-            vertex_output.close();
-            std::cout << "inputfilename: " << input_filename << " " << "field names: " << all_var_names[0] << ", output v2h file: " << v2h_filename << std::endl;
+	    //	    // Get global position of the root 
+            //        auto root_position = coarsen_point(b->local_.global_position(root), b->refinement(), 1);
+	    //	    auto vertex_position = coarsen_point(b->local_.global_position(vertex), b->refinement(), 1);
+	    //        vertex_output << vertex_position[0] << " " << vertex_position[1] << " " << vertex_position[2] << " "
+	    //    	      << root_position[0] << " " << root_position[1] << " " << root_position[2] << "\n";
+            //    }
+            //});
+            //vertex_output.close();
+            //std::cout << "inputfilename: " << input_filename << " " << "field names: " << all_var_names[0] << ", output v2h file: " << v2h_filename << std::endl;
 
             LOG_SEV_IF(world.rank() == 0, info) << "Time to compute and write integral:  "
                                                 << dlog::clock_to_string(timer.elapsed());
