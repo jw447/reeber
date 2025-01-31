@@ -130,14 +130,15 @@ void read_from_file(std::string infn,
         diy::MemoryBuffer& header,
         diy::DiscreteBounds& domain,
         bool split,
-        int nblocks)
+        int nblocks,
+	BoolVector wrap)
 {
     if (not file_exists(infn))
         throw std::runtime_error("Cannot read file " + infn);
 
     if (ends_with(infn, ".npy"))
     {
-        read_from_npy_file<DIM>(infn, world, nblocks, master_reader, assigner, header, domain);
+        read_from_npy_file<DIM>(infn, world, nblocks, master_reader, assigner, header, domain, wrap);
     } else
     {
         if (split)
@@ -277,6 +278,8 @@ int main(int argc, char** argv)
     bool wrap = ops >> opts::Present('w', "wrap", "wrap");
     bool split = ops >> opts::Present("split", "use split IO");
 
+    BoolVector wrap_vec { wrap, wrap, wrap };
+
     bool print_stats = ops >> opts::Present("stats", "print statistics");
     std::string input_filename, output_filename, output_diagrams_filename, output_integral_filename;
 
@@ -375,7 +378,7 @@ int main(int argc, char** argv)
         read_amr_plotfile(input_filename, all_var_names, n_mt_vars, world, nblocks, master_reader, header, cell_volume, domain);
     } else
     {
-        read_from_file(input_filename, world, master_reader, assigner, header, domain, split, nblocks);
+        read_from_file(input_filename, world, master_reader, assigner, header, domain, split, nblocks, wrap_vec);
     }
 
     world.barrier();
