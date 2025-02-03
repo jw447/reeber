@@ -782,7 +782,7 @@ int main(int argc, char** argv)
                 }
             });
             vertex_output.close();
-            std::cout << "inputfilename: " << input_filename << " " << "field names: " << all_var_names[0] << ", output v2h file: " << output_v2h_filename << std::endl;
+            std::cout << "inputfilename: " << input_filename << " " << "field names: " << all_var_names[0] << ", output file: " << output_filename << ", output v2h file: " << output_v2h_filename << std::endl;
 
             LOG_SEV_IF(world.rank() == 0, info) << "Time to compute and write integral:  "
                                                 << dlog::clock_to_string(timer.elapsed());
