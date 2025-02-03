@@ -753,6 +753,7 @@ int main(int argc, char** argv)
 	    v2h = getFileName(v2h);
 
 	    std::string v2h_filename = fileName+"_"+v2h+"_v2h.txt";
+	    std::cout << v2h_filename << std::endl;
 	    std::ofstream vertex_output(v2h_filename);
 	    
 	    master.foreach([&vertex_output, absolute_rho, min_cells](Block* b, const diy::Master::ProxyWithLink& cp) {
