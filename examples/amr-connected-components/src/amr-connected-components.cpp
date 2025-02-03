@@ -279,12 +279,13 @@ int main(int argc, char** argv)
     BoolVector wrap_vec { wrap, wrap, wrap };
 
     bool print_stats = ops >> opts::Present("stats", "print statistics");
-    std::string input_filename, output_filename, output_diagrams_filename, output_integral_filename;
+    std::string input_filename, output_filename, output_v2h_filename, output_diagrams_filename, output_integral_filename;
 
 
     if (ops >> Present('h', "help", "show help message") or
             not(ops >> PosOption(input_filename)) or
-            not(ops >> PosOption(output_filename)))
+            not(ops >> PosOption(output_filename)) or 
+            not(ops >> PosOption(output_v2h_filename)))
     {
         if (world.rank() == 0)
         {
@@ -746,14 +747,15 @@ int main(int argc, char** argv)
                     });
 	    
 	    // wang: Output vertices associated with their merge tree and root coordinates
-	    std::string dataname=input_filename;
-	    std::string fileName = getFileName(dataname);
-	    
-	    std::string v2h = all_var_names[0];
-	    v2h = getFileName(v2h);
+	    //std::string dataname=input_filename;
+	    //std::string fileName = getFileName(dataname);
+	    //
+	    //std::string v2h = all_var_names[0];
+	    //v2h = getFileName(v2h);
 
-	    std::string v2h_filename = fileName+"_"+v2h+"_v2h.txt";
-	    std::ofstream vertex_output(v2h_filename);
+	    //std::string v2h_filename = fileName+"_"+v2h+"_v2h.txt";
+	    //std::ofstream vertex_output(v2h_filename);
+	    std::ofstream vertex_output(output_v2h_filename);
 	    
 	    master.foreach([&vertex_output, absolute_rho, min_cells](Block* b, const diy::Master::ProxyWithLink& cp) {
                 for (const auto& vertex_root_pair : b->vertex_to_deepest_) {
