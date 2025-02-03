@@ -337,9 +337,9 @@ int main(int argc, char** argv)
 
     bool write_diag = (ops >> PosOption(output_diagrams_filename)) and (output_diagrams_filename != "none");
     bool write_integral = (ops >> PosOption(output_integral_filename)) and (output_integral_filename != "none");
-    std::cout << write_diag << write_integral << std::endl;
-
-    std::cout << "inputfilename: " << input_filename << " " << "field names: " << all_var_names[0] << ", output file: " << output_filename << ", output v2h file: " << output_v2h_filename << ", output_diagrams_filename: " << output_diagrams_filename << ", output_integral_filename: " << output_integral_filename << std::endl;
+    
+    //std::cout << write_diag << write_integral << std::endl;
+    //std::cout << "inputfilename: " << input_filename << " " << "field names: " << all_var_names[0] << ", output file: " << output_filename << ", output v2h file: " << output_v2h_filename << ", output_diagrams_filename: " << output_diagrams_filename << ", output_integral_filename: " << output_integral_filename << std::endl;
     //std::cout << "output_diagrams_filename: " << output_diagrams_filename << std::endl;
     diy::FileStorage storage(prefix);
 
@@ -784,7 +784,7 @@ int main(int argc, char** argv)
                 }
             });
             vertex_output.close();
-            std::cout << "inputfilename: " << input_filename << " " << "field names: " << all_var_names[0] << ", output file: " << output_filename << ", output v2h file: " << output_v2h_filename << std::endl;
+            //std::cout << "inputfilename: " << input_filename << " " << "field names: " << all_var_names[0] << ", output file: " << output_filename << ", output v2h file: " << output_v2h_filename << std::endl;
 
             LOG_SEV_IF(world.rank() == 0, info) << "Time to compute and write integral:  "
                                                 << dlog::clock_to_string(timer.elapsed());
