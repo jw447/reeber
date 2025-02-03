@@ -37,6 +37,7 @@
 
 #include "amr-plot-reader.h"
 
+using BoolVector = diy::RegularDecomposer<diy::DiscreteBounds>::BoolVector;
 
 // block-independent types
 using AMRLink = diy::AMRLink;
