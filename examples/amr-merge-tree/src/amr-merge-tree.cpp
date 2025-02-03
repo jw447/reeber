@@ -131,9 +131,9 @@ void read_from_file(std::string infn,
         diy::MemoryBuffer& header,
         diy::DiscreteBounds& domain,
         bool split,
-        int nblocks,
-	//BoolVector wrap
+        int nblocks
 	)
+	//BoolVector wrap
 {
     if (not file_exists(infn))
         throw std::runtime_error("Cannot read file " + infn);
